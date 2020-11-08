@@ -78,35 +78,35 @@ public class AIRobotBehavior extends SimpleRobotBehavior{
             enemyEnergy = e.getEnergy();
             enemyName = e.getEnergy();
         }
-        for(var e : getBulletHitBulletEvents()){
-            e.getBullet();
-            e.getHitBullet();
-        }
-        for(var e : getBulletHitEvents()){
-            e.getBullet();
-            e.getEnergy();
-            e.getName();
-        }
-        for(var e : getBulletMissedEvents()){
-            e.getBullet();
-        }
-        for(var e : getHitByBulletEvents()){
-            e.getBearing();
-            e.getBullet();
-            e.getHeading();
-            e.getName();
-            e.getPower();
-            e.getVelocity();
-        }
-        for(var e : getHitRobotEvents()){
-            e.getBearing();
-            e.getEnergy();
-            e.getName();
-            e.isMyFault();
-        }
-        for(var e : getHitWallEvents()){
-            e.getBearing();
-        }
+//        for(var e : getBulletHitBulletEvents()){
+//            e.getBullet();
+//            e.getHitBullet();
+//        }
+//        for(var e : getBulletHitEvents()){
+//            e.getBullet();
+//            e.getEnergy();
+//            e.getName();
+//        }
+//        for(var e : getBulletMissedEvents()){
+//            e.getBullet();
+//        }
+//        for(var e : getHitByBulletEvents()){
+//            e.getBearing();
+//            e.getBullet();
+//            e.getHeading();
+//            e.getName();
+//            e.getPower();
+//            e.getVelocity();
+//        }
+//        for(var e : getHitRobotEvents()){
+//            e.getBearing();
+//            e.getEnergy();
+//            e.getName();
+//            e.isMyFault();
+//        }
+//        for(var e : getHitWallEvents()){
+//            e.getBearing();
+//        }
         xPosition = getX();
         yPosition = getY();
         pointPosition = getPoint();
