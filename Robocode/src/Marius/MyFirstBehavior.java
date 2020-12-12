@@ -27,6 +27,12 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	boolean distanceBool = false;
 	int distanceBoolCounter = 0;
 	int time = 0;
+	int randStopTime = 0;
+	int stopTime = 0;
+	double[] AIValues = new double[]{6,4,14,20,100,10,15,100,100};
+	NeuralNetwork nn = new NeuralNetwork(4,10,1);
+	int shootTime = 0;
+	double shoot = 0;
 
 	public MyFirstBehavior(SimpleRobot  robot) {
 		super(robot);
@@ -34,6 +40,7 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 
 	@Override
 	public void start() {
+		randStopTime = (int) (Math.random()*20);
 		setColors(new Color(330000),Color.DARK_GRAY, Color.ORANGE,Color.red,Color.green);
 		turnRadar(360);
 		for(var e : getScannedRobotEvents()){
@@ -53,9 +60,14 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 		}
 		ownPositions[0] = getPoint();
 		enemyPositions[0] = getEnemyPoint();
-		shootAverageVelocityAndHeading();
+		trainAI();
+		//shootAI();
 		moveRandomAndEscape();
 		time += 1;
+		if(time>100){
+			recordTime = (int) (AIValues[0]);
+			power = (int) (AIValues[1]);
+		}
 		if(getEnergy() < 20){
 			power = 2;
 			setColors(Color.orange,Color.DARK_GRAY, Color.blue,Color.yellow,Color.red);
@@ -160,8 +172,31 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 
 	}
 
-	public void shootPosibleMovePositions(){
-		
+	public void trainAI(){
+		double[] enemyData = new double[]{enemyDistance,enemyPositions[0].getX(),enemyPositions[0].getY(),enemyHeadings[0],enemyVelocitys[0]};
+		if(shootTime == 0){
+			shoot = Math.random()*360;
+			shootTime = 10;
+		}
+		else{
+			shootTime--;
+		}
+		double[] shootAngle = new double[]{shoot/360};
+		shootInRoomAngle(shoot,power);
+		for(var e: getBulletHitEvents()){
+			double[][] fitX = new double[][]{enemyData};
+			double[][] fitY = new double[][]{shootAngle};
+			nn.fit(fitX,fitY,5000);
+		}
+	}
+
+	public void shootAI() {
+		double[] enemyData = new double[]{enemyDistance, enemyPositions[0].getX(), enemyPositions[0].getY(), enemyHeadings[0], enemyVelocitys[0]};
+		shootInRoomAngle(nn.predict(enemyData).get(0)*360, power);
+	}
+
+	public void shootPossibleMovePositions(){
+
 	}
 
 	/*Different move Strategies */
@@ -189,7 +224,7 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 			escapeRobot = escapeRobot(120,20);
 		}
 
-		int maxTime = 14;
+		int maxTime = (int)(AIValues[2]); //14
 		if(!escapeRobot && !escapeWall){
 			if(moveTime == 0){
 				moveTime = (int) (Math.random()*maxTime);
@@ -206,17 +241,35 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 			else{
 				distanceBoolCounter--;
 			}
-			if(notKeepingRobotDistance(100) && !distanceBool){
+			if(notKeepingRobotDistance(AIValues[7]) && !distanceBool){ //100
 				distanceBool = true;
 				distanceBoolCounter = 10;
 				setColors(new Color(204,0,0),Color.DARK_GRAY, Color.ORANGE,Color.black,Color.green);
 				turn(180);
+				randStopTime = 4;
 			}
-			if(notKeepingWallDistance(100) != 0){
-				turn(notKeepingWallDistance(100));
+			if(notKeepingWallDistance(AIValues[8]) != 0){ //100
+				turn(notKeepingWallDistance(AIValues[8])); //100
 			}
-			int randDist = (int) (Math.random()*10-15);
-			ahead(randDist);
+			randStopTime = 4; // Funktion wird nicht genutzt
+			if(randStopTime == 0){
+				if(stopTime == 0){
+					stopTime = (int) (Math.random()*AIValues[3]+1); //20
+				}
+				else if(stopTime == 1){
+					randStopTime = (int) (Math.random()*AIValues[4]); //100
+					stopTime = 0;
+				}
+				else{
+					stopTime--;
+				}
+				ahead(0);
+			}
+			else{
+				randStopTime--;
+				int randDist = (int) (Math.random()*AIValues[5]-AIValues[6]); //10, 15
+				ahead(randDist);
+			}
 		}
 	}
 
