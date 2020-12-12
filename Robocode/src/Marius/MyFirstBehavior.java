@@ -1,9 +1,16 @@
 package Marius;
+import robocode.AdvancedRobot;
+import robocode.RobocodeFileWriter;
+
 import java.awt.Color;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 
 public class MyFirstBehavior extends SimpleRobotBehavior {
 	//Ged�chtnissektion
-
+	
 	double angle =  360;
 	boolean scanned = false;
 	int recordTime = 6; // recordTime and power at the shoot Method could be strategically varied
@@ -33,6 +40,8 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	NeuralNetwork nn = new NeuralNetwork(4,10,1);
 	int shootTime = 0;
 	double shoot = 0;
+	double[] AIData = new double[5];
+	RobocodeFileWriter writer;
 
 	public MyFirstBehavior(SimpleRobot  robot) {
 		super(robot);
@@ -40,6 +49,7 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 
 	@Override
 	public void start() {
+		loadAIData();
 		randStopTime = (int) (Math.random()*20);
 		setColors(new Color(330000),Color.DARK_GRAY, Color.ORANGE,Color.red,Color.green);
 		turnRadar(360);
@@ -188,6 +198,7 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 			double[][] fitY = new double[][]{shootAngle};
 			nn.fit(fitX,fitY,5000);
 		}
+		saveAIData();
 	}
 
 	public void shootAI() {
@@ -372,5 +383,58 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 		double x = (Math.sin(Math.toRadians(heading)) * distance);
 		double y = (Math.cos(Math.toRadians(heading)) * distance);
 		return new Point(x,y);
+	}
+
+	/* AI Informationen laden */
+	public void loadAIData() {
+		String AIDataUnsplit = "";
+
+		File file = new File("AIData.txt");
+
+		if (!file.canRead() || !file.isFile())
+			System.exit(0);
+
+		BufferedReader in = null;
+		try {
+			in = new BufferedReader(new FileReader("AIData.txt"));
+			String zeile = null;
+			while ((zeile = in.readLine()) != null) {
+				AIDataUnsplit =  zeile;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (in != null)
+				try {
+					in.close();
+				} catch (IOException e) {
+				}
+		}
+		String[] AIDataString = AIDataUnsplit.split(";");
+		for(int i = 0; i<AIDataString.length; i++){
+			AIData[i] = Integer.parseInt(AIDataString[i]);
+		}
+	}
+
+	public void saveAIData() {
+//		try {
+//			File myObj = new File("AIData.txt");
+//			if (myObj.createNewFile()) {
+//				//System.out.println("File created: " + myObj.getName());
+//			} else {
+//				//System.out.println("File already exists.");
+//			}
+//		} catch (IOException e) {
+//			System.out.println("An error occurred.");
+//			e.printStackTrace();
+//		}
+		try {
+			writer.write("Files in Java might be tricky, but it is fun enough!");
+			writer.close();
+			//System.out.println("Successfully wrote to the file.");
+		} catch (IOException e) {
+			System.out.println("An error occurred.");
+			e.printStackTrace();
+		}
 	}
 }
