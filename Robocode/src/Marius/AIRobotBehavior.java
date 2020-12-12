@@ -11,7 +11,7 @@ public class AIRobotBehavior extends SimpleRobotBehavior{
     double enemyHeading;
     double enemyVelocity;
     double enemyEnergy;
-    double enemyName;
+    String enemyName;
 
     double xPosition;
     double yPosition;
@@ -76,7 +76,7 @@ public class AIRobotBehavior extends SimpleRobotBehavior{
             enemyHeading = e.getHeading();
             enemyVelocity = e.getVelocity();
             enemyEnergy = e.getEnergy();
-            enemyName = e.getEnergy();
+            enemyName = e.getName();
         }
 //        for(var e : getBulletHitBulletEvents()){
 //            e.getBullet();

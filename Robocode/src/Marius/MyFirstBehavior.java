@@ -6,7 +6,8 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 
 	double angle =  360;
 	boolean scanned = false;
-	double[] bearings = new double[]{0,0};
+	int recordTime = 10;
+	double bearing;
 	double enemyDistance;
 	double enemyHeading;
 	double enemyVelocity;
@@ -17,9 +18,12 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	int wallEscapeDuration = 0;
 	boolean escapeRobot = false;
 	int robotEscapeDuration = 0;
-	double[] enemyAngles = new double[bearings.length];
-	double[] headings = new double[bearings.length];
-	double[] gunHeadings = new double[bearings.length];
+	double[] headings = new double[recordTime];
+	double[] gunHeadings = new double[recordTime];
+	Point[] ownPositions = new Point[recordTime];
+	Point[] enemyPositions = new Point[recordTime];
+	double width;
+	double height;
 
 
 
@@ -35,50 +39,56 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 			double turnAngle = Utils.normalRelativeAngle(90-e.getBearing());
 			turn(turnAngle);
 		}
+		width = getBattleFieldWidth();
+		height = getBattleFieldHeight();
 	}
 
 	@Override
 	void execute() {
-		scannerShooter();
+		scanner();
+		for(int i = recordTime-2; i >=0;i--){
+			ownPositions[i+1]=ownPositions[i];
+			enemyPositions[i+1]=enemyPositions[i];
+		}
+		ownPositions[0] = getPoint();
+		enemyPositions[0] = getEnemyPoint();
+		shoot();
 		move();
 	}
 
-	public void scannerShooter(){
-		double absoluteShootAngle = 0;
-		double power = 4;
+	public void scanner(){
 		for(var e : getScannedRobotEvents()){
-			//Scannereinstellung
-			for(int i = 0; i < bearings.length - 1;i++){
-				bearings[i+1]=bearings[i];
+			for(int i = recordTime-2; i >=0;i--){
 				headings[i+1]=headings[i];
 				gunHeadings[i+1]=gunHeadings[i];
 			}
-			bearings[0] = e.getBearing();
 			headings[0] = getHeading();
+			gunHeadings[0] = getGunHeading();
+			//Scannereinstellung
+			bearing = e.getBearing();
 			double radarHeading = getRadarHeading();
-			double primAngle = Utils.normalRelativeAngle(headings[0]-radarHeading+bearings[0]);
+			double primAngle = Utils.normalRelativeAngle(headings[0]-radarHeading+bearing);
 			if(primAngle > 0){
 				angle = primAngle+20;
 			}
 			else{
 				angle = primAngle-20;
 			}
-			//Guneinstellung
-			gunHeadings[0] = getGunHeading();
+			//Datenübergabe
 			enemyDistance = e.getDistance();
 			enemyHeading = e.getHeading();
 			enemyVelocity = e.getVelocity();
-			double time = enemyDistance/(20-(3*power));
-			double[] absoluteEnemyAngles = getAbsoluteBearings(bearings,headings);
-			absoluteShootAngle = absoluteEnemyAngles[0]+((absoluteEnemyAngles[0]-absoluteEnemyAngles[1])*time/8);
-			//Datenübergabe
 			enemyEnergy = e.getEnergy();
 			scanned = true;
 		}
 		//Scanner
 		turnRadar(angle);
-		//Gun
-		shootInRoomAngle(absoluteShootAngle,power);
+	}
+
+	public void shoot(){
+		double power = 4;
+		double time = enemyDistance/(20-(3*power));
+		shootAtPoint(enemyPositions[0],power);
 	}
 
 	public void move(){
@@ -130,12 +140,25 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 		}
 	}
 
-	public double[] getAbsoluteBearings(double[] bearings, double[] headings){
-		double[] absoluteBearings = new double[bearings.length];
-		for(int i = 0;i< bearings.length;i++){
-			absoluteBearings[i] = Utils.normalAbsoluteAngle(bearings[i]+headings[i]);
+	public void shootAtPoint(Point point, double power){
+		double distance = Math.sqrt(((point.getX()-ownPositions[0].getX())*(point.getX()-ownPositions[0].getX()))+((point.getY()-ownPositions[0].getY())*(point.getY()-ownPositions[0].getY())));
+		double phi = Math.toDegrees(Math.asin((point.getX()-ownPositions[0].getX())/distance));
+		if((point.getY()-ownPositions[0].getY()) <= 0) {
+			phi = 180 - phi;
 		}
-		return absoluteBearings;
+		phi = Utils.normalAbsoluteAngle(phi);
+		System.out.println(Math.asin(-1));
+		shootInRoomAngle(phi, power);
 	}
 
+	public double getAbsoluteBearings(double bearing, double heading){
+		return Utils.normalAbsoluteAngle(bearing+heading);
+	}
+
+	public Point getEnemyPoint(){
+		double absoluteEnemyAngle = getAbsoluteBearings(bearing,headings[0]);
+		double x = ownPositions[0].getX() + (Math.sin(Math.toRadians(absoluteEnemyAngle)) * enemyDistance);
+		double y = ownPositions[0].getY() + (Math.cos(Math.toRadians(absoluteEnemyAngle)) * enemyDistance);
+		return new Point(x,y);
+	}
 }
