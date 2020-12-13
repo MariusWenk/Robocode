@@ -78,5 +78,37 @@ public class NeuralNetwork {
 
     }
 
+    public Matrix getWeights_ih(){
+        return weights_ih;
+    }
+
+    public Matrix getWeights_ho(){
+        return weights_ho;
+    }
+
+    public Matrix getBias_h(){
+        return bias_h;
+    }
+
+    public Matrix getBias_o(){
+        return bias_o;
+    }
+
+    public void setWeights_ih(Matrix weights_ih){
+        this.weights_ih = weights_ih;
+    }
+
+    public void setWeights_ho(Matrix weights_oh){
+        this.weights_ho = weights_oh;
+    }
+
+    public void setBias_h(Matrix bias_h){
+        this.bias_h = bias_h;
+    }
+
+    public void setBias_o(Matrix bias_o){
+        this.bias_o = bias_o;
+    }
+
 
 }

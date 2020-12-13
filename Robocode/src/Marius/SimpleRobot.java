@@ -1188,7 +1188,7 @@ class Bullet {
  * the method returns.
  */
 abstract class SimpleRobotBehavior {
-    private SimpleRobot robot;
+    public SimpleRobot robot;
 
     SimpleRobotBehavior(SimpleRobot robot) {
         this.robot = robot;

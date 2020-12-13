@@ -19,6 +19,12 @@ class Matrix {
         }
     }
 
+    public Matrix(double [][]data){
+        this.data = data;
+        this.rows = data.length;
+        this.cols = data[0].length;
+    }
+
     public void print()
     {
         for(int i=0;i<rows;i++)

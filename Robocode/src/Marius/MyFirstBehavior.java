@@ -10,7 +10,7 @@ import java.io.IOException;
 
 public class MyFirstBehavior extends SimpleRobotBehavior {
 	//Ged�chtnissektion
-	
+
 	double angle =  360;
 	boolean scanned = false;
 	int recordTime = 6; // recordTime and power at the shoot Method could be strategically varied
@@ -37,18 +37,26 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	int randStopTime = 0;
 	int stopTime = 0;
 	double[] AIValues = new double[]{6,4,14,20,100,10,15,100,100};
-	NeuralNetwork nn = new NeuralNetwork(4,10,1);
+	int i = 6;
+	int h = 1000;
+	int o = 1;
+	NeuralNetwork nn = new NeuralNetwork(i,h,o);
 	int shootTime = 0;
 	double shoot = 0;
-	double[] AIData = new double[5];
-	RobocodeFileWriter writer;
+	double[][] AIData_weights_ih = new double[h][i];
+	double[][] AIData_weights_ho = new double[o][h];
+	double[][] AIData_bias_h = new double[h][1];
+	double[][] AIData_bias_o = new double[o][1];
+	int modeIndicator = 0;
+
 
 	public MyFirstBehavior(SimpleRobot  robot) {
 		super(robot);
 	}
 
 	@Override
-	public void start() {
+	public void start(){
+		//saveAIData();
 		loadAIData();
 		randStopTime = (int) (Math.random()*20);
 		setColors(new Color(330000),Color.DARK_GRAY, Color.ORANGE,Color.red,Color.green);
@@ -70,8 +78,12 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 		}
 		ownPositions[0] = getPoint();
 		enemyPositions[0] = getEnemyPoint();
-		trainAI();
-		//shootAI();
+		if(modeIndicator == 0){
+			trainAI();
+		}
+		if(modeIndicator == 1){
+			shootAI();
+		}
 		moveRandomAndEscape();
 		time += 1;
 		if(time>100){
@@ -183,7 +195,7 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	}
 
 	public void trainAI(){
-		double[] enemyData = new double[]{enemyDistance,enemyPositions[0].getX(),enemyPositions[0].getY(),enemyHeadings[0],enemyVelocitys[0]};
+		double[] enemyData = new double[]{enemyPositions[0].getX(),enemyPositions[0].getY(),enemyHeadings[0],enemyVelocitys[0],ownPositions[0].getX(),ownPositions[0].getY()};
 		if(shootTime == 0){
 			shoot = Math.random()*360;
 			shootTime = 10;
@@ -196,14 +208,21 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 		for(var e: getBulletHitEvents()){
 			double[][] fitX = new double[][]{enemyData};
 			double[][] fitY = new double[][]{shootAngle};
-			nn.fit(fitX,fitY,5000);
+			nn.fit(fitX,fitY,50);
+			saveAIData();
 		}
-		saveAIData();
 	}
 
 	public void shootAI() {
-		double[] enemyData = new double[]{enemyDistance, enemyPositions[0].getX(), enemyPositions[0].getY(), enemyHeadings[0], enemyVelocitys[0]};
-		shootInRoomAngle(nn.predict(enemyData).get(0)*360, power);
+		double[] enemyData = new double[]{enemyPositions[0].getX(),enemyPositions[0].getY(),enemyHeadings[0],enemyVelocitys[0],ownPositions[0].getX(),ownPositions[0].getY()};
+		if(shootTime == 0){
+			shoot = nn.predict(enemyData).get(0)*360;
+			shootTime = 10;
+		}
+		else{
+			shootTime--;
+		}
+		shootInRoomAngle(shoot,power);
 	}
 
 	public void shootPossibleMovePositions(){
@@ -387,19 +406,33 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 
 	/* AI Informationen laden */
 	public void loadAIData() {
-		String AIDataUnsplit = "";
+		AIData_weights_ih = loadData(h,i,"AIData_weights_ih.txt");
+		AIData_weights_ho = loadData(o,h,"AIData_weights_ho.txt");
+		AIData_bias_h = loadData(h,1,"AIData_bias_h.txt");
+		AIData_bias_o = loadData(o,1,"AIData_bias_o.txt");
+		nn.setWeights_ih(new Matrix(AIData_weights_ih));
+		nn.setWeights_ho(new Matrix(AIData_weights_ho));
+		nn.setBias_h(new Matrix(AIData_bias_h));
+		nn.setBias_o(new Matrix(AIData_bias_o));
+	}
 
-		File file = new File("AIData.txt");
+	public double[][] loadData(int a, int b, String filename) {
+		String AIDataUnsplit[] = new String[a];
+		double[][] dataFile = new double[a][b];
 
-		if (!file.canRead() || !file.isFile())
+		File AIDataFile = robot.getDataFile(filename);
+
+		if (!AIDataFile.canRead() || !AIDataFile.isFile())
 			System.exit(0);
 
 		BufferedReader in = null;
 		try {
-			in = new BufferedReader(new FileReader("AIData.txt"));
+			in = new BufferedReader(new FileReader(AIDataFile));
 			String zeile = null;
+			int t = 0;
 			while ((zeile = in.readLine()) != null) {
-				AIDataUnsplit =  zeile;
+				AIDataUnsplit[t] =  zeile;
+				t++;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -410,10 +443,14 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 				} catch (IOException e) {
 				}
 		}
-		String[] AIDataString = AIDataUnsplit.split(";");
-		for(int i = 0; i<AIDataString.length; i++){
-			AIData[i] = Integer.parseInt(AIDataString[i]);
+		String[][] AIDataString = new String[a][b];
+		for(int t = 0; t<a; t++){
+			AIDataString[t] = AIDataUnsplit[t].split(";");
+			for(int j = 0; j<b; j++){
+				dataFile[t][j] = Double.parseDouble(AIDataString[t][j]);
+			}
 		}
+		return dataFile;
 	}
 
 	public void saveAIData() {
@@ -429,8 +466,68 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 //			e.printStackTrace();
 //		}
 		try {
-			writer.write("Files in Java might be tricky, but it is fun enough!");
-			writer.close();
+			robot.getDataDirectory();
+			File AIDataFile_weights_ih = robot.getDataFile("AIData_weights_ih.txt");
+			File AIDataFile_weights_ho = robot.getDataFile("AIData_weights_ho.txt");
+			File AIDataFile_bias_h = robot.getDataFile("AIData_bias_h.txt");
+			File AIDataFile_bias_o = robot.getDataFile("AIData_bias_o.txt");
+			RobocodeFileWriter writer_weights_ih = new RobocodeFileWriter(AIDataFile_weights_ih);
+			RobocodeFileWriter writer_weights_ho = new RobocodeFileWriter(AIDataFile_weights_ho);
+			RobocodeFileWriter writer_bias_h = new RobocodeFileWriter(AIDataFile_bias_h);
+			RobocodeFileWriter writer_bias_o = new RobocodeFileWriter(AIDataFile_bias_o);
+			String[] zeile_weights_ih = new String[h];
+			String[] zeile_weights_ho = new String[o];
+			String[] zeile_bias_h = new String[h];
+			String[] zeile_bias_o = new String[o];
+			for(int t = 0; t<this.h; t++){
+				zeile_weights_ih[t] = Double.toString(nn.getWeights_ih().data[t][0]);
+				for(int j = 1; j<this.i; j++){
+					zeile_weights_ih[t] = zeile_weights_ih[t]+";"+nn.getWeights_ih().data[t][j];
+				}
+			}
+			for(int t = 0; t<this.h; t++){
+				writer_weights_ih.write(zeile_weights_ih[t]);
+				if(t != this.h - 1){
+					writer_weights_ih.write("\n");
+				}
+			}
+
+			for(int t = 0; t<this.o; t++){
+				zeile_weights_ho[t] = Double.toString(nn.getWeights_ho().data[t][0]);
+				for(int j = 1; j<this.h; j++){
+					zeile_weights_ho[t] = zeile_weights_ho[t]+";"+nn.getWeights_ho().data[t][j];
+				}
+			}
+			for(int t = 0; t<this.o; t++){
+				writer_weights_ho.write(zeile_weights_ho[t]);
+				if(t != this.o - 1){
+					writer_weights_ho.write("\n");
+				}
+			}
+
+			for(int t = 0; t<this.h; t++){
+				zeile_bias_h[t] = Double.toString(nn.getBias_h().data[t][0]);
+			}
+			for(int t = 0; t<this.h; t++){
+				writer_bias_h.write(zeile_bias_h[t]);
+				if(t != this.h - 1){
+					writer_bias_h.write("\n");
+				}
+			}
+
+			for(int t = 0; t<this.o; t++){
+				zeile_bias_o[t] = Double.toString(nn.getBias_o().data[t][0]);
+			}
+			for(int t = 0; t<this.o; t++){
+				writer_bias_o.write(zeile_bias_o[t]);
+				if(t != this.o - 1){
+					writer_bias_o.write("\n");
+				}
+			}
+			writer_weights_ih.close();
+			writer_weights_ho.close();
+			writer_bias_h.close();
+			writer_bias_o.close();
 			//System.out.println("Successfully wrote to the file.");
 		} catch (IOException e) {
 			System.out.println("An error occurred.");
