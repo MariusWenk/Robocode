@@ -14,7 +14,7 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	double angle =  360;
 	boolean scanned = false;
 	int recordTime = 6; // recordTime and power at the shoot Method could be strategically varied
-	double power = 4;
+	double power = 2;
 	double bearing;
 	double enemyDistance;
 	double enemyEnergy;
@@ -37,8 +37,8 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	int randStopTime = 0;
 	int stopTime = 0;
 	double[] AIValues = new double[]{6,4,14,20,100,10,15,100,100};
-	int i = 6;
-	int h = 1000;
+	int i = 4;
+	int h = 5;
 	int o = 1;
 	NeuralNetwork nn = new NeuralNetwork(i,h,o);
 	int shootTime = 0;
@@ -47,7 +47,12 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	double[][] AIData_weights_ho = new double[o][h];
 	double[][] AIData_bias_h = new double[h][1];
 	double[][] AIData_bias_o = new double[o][1];
-	int modeIndicator = 0;
+	int bulletDataRecordTime = 10;
+	double[][] bulletData = new double[bulletDataRecordTime][i];
+	Bullet[] bulletArray = new Bullet[bulletDataRecordTime];
+	double[] shootAngleData = new double[bulletDataRecordTime];
+	int bulletRecord = 0;
+	int modeIndicator = 1;
 
 
 	public MyFirstBehavior(SimpleRobot  robot) {
@@ -195,18 +200,30 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	}
 
 	public void trainAI(){
-		double[] enemyData = new double[]{enemyPositions[0].getX(),enemyPositions[0].getY(),enemyHeadings[0],enemyVelocitys[0],ownPositions[0].getX(),ownPositions[0].getY()};
 		if(shootTime == 0){
-			shoot = Math.random()*360;
+			Point point = enemyPositions[0];
+			double distance = Math.sqrt(((point.getX()-ownPositions[0].getX())*(point.getX()-ownPositions[0].getX()))+((point.getY()-ownPositions[0].getY())*(point.getY()-ownPositions[0].getY())));
+			double phi = Math.toDegrees(Math.asin((point.getX()-ownPositions[0].getX())/distance));
+			if((point.getY()-ownPositions[0].getY()) <= 0) {
+				phi = 180 - phi;
+			}
+			phi = Utils.normalAbsoluteAngle(phi);
+			shoot = phi + Math.random()*40;
 			shootTime = 10;
 		}
 		else{
 			shootTime--;
 		}
-		double[] shootAngle = new double[]{shoot/360};
 		shootInRoomAngle(shoot,power);
 		for(var e: getBulletHitEvents()){
-			double[][] fitX = new double[][]{enemyData};
+			int n = 0;
+			for(int i = 0; i<Math.min(bulletDataRecordTime,bulletRecord);i++){
+				if(e.getBullet().equals(bulletArray[i])){
+					n = i;
+				}
+			}
+			double[][] fitX = new double[][]{bulletData[n]};
+			double[] shootAngle = new double[]{shootAngleData[n]/360};
 			double[][] fitY = new double[][]{shootAngle};
 			nn.fit(fitX,fitY,50);
 			saveAIData();
@@ -214,7 +231,7 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 	}
 
 	public void shootAI() {
-		double[] enemyData = new double[]{enemyPositions[0].getX(),enemyPositions[0].getY(),enemyHeadings[0],enemyVelocitys[0],ownPositions[0].getX(),ownPositions[0].getY()};
+		double[] enemyData = new double[]{enemyPositions[0].getX()-ownPositions[0].getX(),enemyPositions[0].getY()-ownPositions[0].getY(),enemyHeadings[0],enemyVelocitys[0]};
 		if(shootTime == 0){
 			shoot = nn.predict(enemyData).get(0)*360;
 			shootTime = 10;
@@ -308,7 +325,18 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 		double gunAngle = Utils.normalRelativeAngle(angle-gunHeadings[0]);
 		turnGun(gunAngle);
 		if(Math.abs(gunHeadings[0]-angle)<=2){
-			fireBullet(power);
+			Bullet bullet = fireBullet(power);
+			if(modeIndicator == 0){
+				bulletRecord++;
+				for(int i = bulletDataRecordTime-2; i >=0;i--){
+					bulletData[i+1]=bulletData[i];
+					bulletArray[i+1]=bulletArray[i];
+					shootAngleData[i+1]=shootAngleData[i];
+				}
+				bulletData[0] = new double[]{enemyPositions[0].getX()-ownPositions[0].getX(),enemyPositions[0].getY()-ownPositions[0].getY(),enemyHeadings[0],enemyVelocitys[0]};
+				bulletArray[0] = bullet;
+				shootAngleData[0] = angle;
+			}
 		}
 	}
 
@@ -319,7 +347,6 @@ public class MyFirstBehavior extends SimpleRobotBehavior {
 			phi = 180 - phi;
 		}
 		phi = Utils.normalAbsoluteAngle(phi);
-		System.out.println(Math.asin(-1));
 		shootInRoomAngle(phi, power);
 	}
 
